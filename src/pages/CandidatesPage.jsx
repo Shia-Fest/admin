@@ -121,6 +121,7 @@ const CandidatesPage = () => {
                     onFormCancel={() => setIsModalOpen(false)}
                 />
             </Modal>
+            
         </div>
     );
 };

@@ -3,6 +3,8 @@ import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
 import './App.css'
 import CandidatePage from './pages/CandidatesPage';
+import AddProgrammeForm from './components/AddProgrammeForm';
+import ProgrammesPage from './pages/ProgrammesPage';
 
 function App() {
   const [ isAuthenticated, setIsAuthenticated ] = useState(false);
@@ -29,7 +31,7 @@ function App() {
       case 'candidate':
         return <CandidatePage />;
       default:
-          return <DashboardPage />
+          return <ProgrammesPage />
     }
   };
   if(!isAuthenticated) {

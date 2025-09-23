@@ -5,6 +5,7 @@ import './App.css'
 import CandidatePage from './pages/CandidatesPage';
 import AddProgrammeForm from './components/AddProgrammeForm';
 import ProgrammesPage from './pages/ProgrammesPage';
+import ResultsPage from './pages/ResultsPage';
 
 function App() {
   const [ isAuthenticated, setIsAuthenticated ] = useState(false);
@@ -31,7 +32,7 @@ function App() {
       case 'candidate':
         return <CandidatePage />;
       default:
-          return <ProgrammesPage />
+          return <ResultsPage />
     }
   };
   if(!isAuthenticated) {

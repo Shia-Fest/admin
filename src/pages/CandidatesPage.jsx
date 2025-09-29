@@ -7,10 +7,15 @@ import AddCandidateForm from '../components/AddCandidate';
 const CandidatesPage = () => {
     const [teams, setTeams] = useState([]);
     const [candidates, setCandidates] = useState([]);
-    const [selectedTeam, setSelectedTeam] = useState(null); // This state tracks which team is selected
+    
+    const [selectedTeam, setSelectedTeam] = useState(null); 
+    const [selectedCategory, setSelectedCategory] = useState(null)
+
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
+
+    const categories = ['BIDAYA', 'ULA', 'THANIYYAH', 'THANAWIYYAH', 'ALIYA'];
 
     // This effect runs once to fetch all the necessary data from the backend
     useEffect(() => {
@@ -57,10 +62,10 @@ const CandidatesPage = () => {
     // A simple but powerful line: it filters the master candidate list
     // to only show candidates belonging to the currently selected team.
     const filteredCandidates = selectedTeam 
-        ? candidates.filter(c => c.team?._id === selectedTeam._id) 
+        ? candidates.filter(c => c.team?._id === selectedTeam._id && c.category === selectedCategory ) 
         : [];
 
-    const headers = ['Image', 'Admission No', 'Name', 'Category', 'Points', 'Actions'];
+    const headers = ['Image', 'Admission No', 'Name', 'Points', 'Actions'];
 
     // This function defines how each row in the candidate table should look
     const renderRow = (candidate) => (
@@ -68,7 +73,6 @@ const CandidatesPage = () => {
             <td className="px-6 py-4 whitespace-nowrap"><img src={candidate.image.url} alt={candidate.name} className="w-10 h-10 rounded-full object-cover" /></td>
             <td className="px-6 py-4 text-sm text-gray-900">{candidate.admissionNo}</td>
             <td className="px-6 py-4 text-sm text-gray-900">{candidate.name}</td>
-            <td className="px-6 py-4 text-sm text-gray-500">{candidate.category}</td>
             <td className="px-6 py-4 text-sm font-bold text-gray-900">{candidate.totalPoints}</td>
             <td className="px-6 py-4 text-sm font-medium">
                 <button className="text-indigo-600 hover:text-indigo-900">Edit</button>
@@ -76,6 +80,16 @@ const CandidatesPage = () => {
             </td>
         </tr>
     );
+
+    const Breadcrumbs = () => (
+        <div className="text-sm">
+            <span onClick={() => { setSelectedTeam(null); setSelectedCategory(null);}} className="hover:underline cursor-pointer">Teams</span>
+            {selectedTeam && <span className='mx-2'>&gt;</span>}
+            {selectedTeam && <span onClick={() => setSelectedCategory(null)} className="hover:underline cursor-pointer">{selectedTeam.name}</span>}
+            {selectedCategory && <span className="mx-2">&gt;</span>}
+            {selectedCategory && <span className="font-semibold text-gray-800">{selectedCategory}</span>}
+        </div>
+    )
 
     if (loading) return <p className="p-8">Loading data...</p>;
     if (error) return <p className="p-8 text-red-500">{error}</p>;
@@ -99,29 +113,29 @@ const CandidatesPage = () => {
         );
     }
 
+    if (!selectedCategory) {
+        return (
+            <div className="p-8"><Breadcrumbs /><h1 className="text-3xl font-bold text-gray-800 mb-6">Select a Category</h1><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">{categories.map(cat => (<div key={cat} onClick={() => setSelectedCategory(cat)} className="p-6 bg-white rounded-lg shadow-md hover:shadow-lg hover:bg-blue-50 cursor-pointer"><h2 className="text-xl font-semibold">{cat}</h2></div>))}</div></div>
+        );
+    }
+
     // VIEW 2: If a team HAS been selected, we show the candidate table for that team.
-    return (
+     return (
         <div className="p-8">
+            <Breadcrumbs />
             <div className="flex justify-between items-center mb-6">
-                <div>
-                    {/* This button sets the selectedTeam state back to null, returning to the team list */}
-                    <button onClick={() => setSelectedTeam(null)} className="text-sm text-blue-600 hover:underline mb-2">&larr; Back to Teams</button>
-                    <h1 className="text-3xl font-bold text-gray-800">Manage Candidates for {selectedTeam.name}</h1>
-                </div>
-                <button onClick={() => setIsModalOpen(true)} className="px-4 py-2 font-semibold text-white bg-blue-600 rounded-md hover:bg-blue-700 shadow-sm">
-                    + Add Candidate
-                </button>
+                <h1 className="text-3xl font-bold text-gray-800">Manage Candidates</h1>
+                <button onClick={() => setIsModalOpen(true)} className="px-4 py-2 font-semibold text-white bg-blue-600 rounded-md hover:bg-blue-700 shadow-sm">+ Add Candidate</button>
             </div>
-
             <DataTable headers={headers} data={filteredCandidates} renderRow={renderRow} />
-
-            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={`Add Candidate to ${selectedTeam.name}`}>
+            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={`Add Candidate to ${selectedTeam.name} (${selectedCategory})`}>
                 <AddCandidateForm 
                     onFormSubmit={handleFormSubmit}
                     onFormCancel={() => setIsModalOpen(false)}
+                    teamId={selectedTeam._id} // Pass the selected team ID
+                    categoryName={selectedCategory} // Pass the selected category name
                 />
             </Modal>
-            
         </div>
     );
 };

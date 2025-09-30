@@ -6,12 +6,12 @@ const ResultsPage = () => {
     const [programmes, setProgrammes] = useState([]);
     const [candidates, setCandidates] = useState([]);
     const [teams, setTeams] = useState([]);
-    const [resultsData, setResultsData] = useState({});
+    const [resultsData, setResultsData] = useState({}); // Stores the form inputs { candidateId: { rank, grade } }
 
-    // State for the multi-step selection flow
+    // States to manage the multi-step selection flow
+    const [selectedCategory, setSelectedCategory] = useState(null);
     const [selectedProgramme, setSelectedProgramme] = useState(null);
     const [selectedTeam, setSelectedTeam] = useState(null);
-    const [selectedCategory, setSelectedCategory] = useState(null);
     
     // UI states
     const [loading, setLoading] = useState(true);
@@ -19,7 +19,7 @@ const ResultsPage = () => {
 
     const categories = ['BIDAYA', 'ULA', 'THANIYYAH', 'THANAWIYYAH', 'ALIYA'];
 
-    // 1. Fetch all initial data when the page loads
+    // 1. Fetch all initial data when the page loads for efficiency
     useEffect(() => {
         const fetchInitialData = async () => {
             try {
@@ -41,170 +41,103 @@ const ResultsPage = () => {
         fetchInitialData();
     }, []);
 
-    // 2. Fetch existing results whenever a programme is selected
+    // 2. Fetch existing PENDING results whenever a programme is selected to pre-fill the form
     useEffect(() => {
         if (selectedProgramme) {
-            setLoading(true);
-            api.get(`/programmes/${selectedProgramme._id}/results`)
-                .then(res => {
-                    const existingResults = res.data.reduce((acc, result) => {
+            api.get(`/programmes/${selectedProgramme._id}/results`).then(res => {
+                const existingResults = res.data.reduce((acc, result) => {
+                    // Only load results that are still pending
+                    if (result.status === 'pending') {
                         acc[result.candidate] = { rank: result.rank, grade: result.grade };
-                        return acc;
-                    }, {});
-                    setResultsData(existingResults);
-                })
-                .catch(() => setError('Failed to fetch existing results.'))
-                .finally(() => setLoading(false));
+                    }
+                    return acc;
+                }, {});
+                setResultsData(existingResults);
+            });
         }
     }, [selectedProgramme]);
 
     // --- EVENT HANDLERS ---
-
     const handleResultChange = (candidateId, field, value) => {
-        setResultsData(prev => ({
-            ...prev,
-            [candidateId]: { ...prev[candidateId], [field]: value },
-        }));
+        setResultsData(prev => ({...prev, [candidateId]: { ...prev[candidateId], [field]: value }}));
     };
     
-    const handleSubmitResults = async () => {
-        if (Object.keys(resultsData).length === 0) return alert('No results have been entered.');
-        const resultsPayload = Object.entries(resultsData).map(([candidateId, data]) => ({
-            candidateId, rank: data.rank ? Number(data.rank) : null, grade: data.grade || null,
+    // This function now saves the results to the 'pending' state
+    const handleSavePending = async () => {
+        const resultsPayload = Object.entries(resultsData).map(([candidateId, data]) => ({ 
+            candidateId, 
+            rank: data.rank ? Number(data.rank) : null, 
+            grade: data.grade || null 
         }));
-        setLoading(true);
         try {
             await api.post(`/programmes/${selectedProgramme._id}/results`, { results: resultsPayload });
-            alert('Results saved successfully!');
-            const progRes = await api.get('/programmes');
-            setProgrammes(progRes.data);
-            handleBackToProgrammes(); // Go back to the very first step
+            alert('Results saved to pending! Please go to the "Pending Results" page to approve.');
+            handleBackToProgrammes(); // Go back to the start of the workflow
         } catch (err) {
-            alert('Error: ' + (err.response?.data?.message || 'Failed to submit results.'));
-        } finally {
-            setLoading(false);
+            alert('Error: ' + (err.response?.data?.message || 'Failed to save results.'));
         }
     };
 
-    // Handlers for the "Back" buttons
-    const handleBackToProgrammes = () => {
-        setSelectedProgramme(null);
-        setSelectedTeam(null);
-        setSelectedCategory(null);
-        setResultsData({});
-    };
-    const handleBackToTeams = () => {
-        setSelectedTeam(null);
-        setSelectedCategory(null);
-    };
+    // Handlers for the "Back" buttons to navigate the workflow
+    const handleBackToProgrammes = () => { setSelectedProgramme(null); setSelectedTeam(null); setSelectedCategory(null); setResultsData({}); };
+    const handleBackToCategories = () => { setSelectedProgramme(null); setSelectedTeam(null); };
 
-    // --- FILTERING & RENDER LOGIC ---
+    // --- FILTERING LOGIC ---
+    const filteredProgrammes = selectedCategory ? programmes.filter(p => p.category === selectedCategory) : [];
+    const filteredCandidates = (selectedTeam && selectedCategory) ? candidates.filter(c => c.team?._id === selectedTeam._id && c.category === selectedCategory) : [];
 
-    const filteredCandidates = (selectedTeam && selectedCategory)
-        ? candidates.filter(c => c.team?._id === selectedTeam._id && c.category === selectedCategory)
-        : [];
-
-    if (loading && !selectedProgramme) return <p className="p-8">Loading...</p>;
+    // --- RENDER LOGIC ---
+    if (loading) return <p className="p-8">Loading...</p>;
     if (error) return <p className="p-8 text-red-500">{error}</p>;
 
-    // VIEW 1: Select a Programme
-    if (!selectedProgramme) {
-        return (
-            <div className="p-8">
-                <h1 className="text-3xl font-bold text-gray-800 mb-6">Step 1: Select a Programme</h1>
-                <div className="space-y-4">
-                    {programmes.map(prog => (
-                        <div key={prog._id} onClick={() => setSelectedProgramme(prog)} className="p-4 bg-white rounded-lg shadow-md hover:shadow-lg cursor-pointer flex justify-between items-center">
-                            <div><h2 className="text-xl font-semibold text-gray-700">{prog.name}</h2><p className="text-sm text-gray-500">{prog.type}</p></div>
-                            <span className={`px-3 py-1 text-xs font-semibold rounded-full ${prog.isResultPublished ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{prog.isResultPublished ? 'Published' : 'Pending'}</span>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        );
+    // VIEW 1: Select Category
+    if (!selectedCategory) {
+        return (<div className="p-8"><h1 className="text-3xl font-bold mb-6">Step 1: Select a Category</h1><div className="grid grid-cols-1 md:grid-cols-3 gap-6">{categories.map(cat => (<div key={cat} onClick={() => setSelectedCategory(cat)} className="p-6 bg-white rounded-lg shadow-md hover:shadow-lg cursor-pointer"><h2 className="text-xl font-semibold">{cat}</h2></div>))}</div></div>);
     }
     
-    // VIEW 2: Select a Team
+    // VIEW 2: Select Programme
+    if (!selectedProgramme) {
+        return (<div className="p-8"><button onClick={() => setSelectedCategory(null)} className="text-sm text-blue-600 mb-4">&larr; Back to Categories</button><h1 className="text-3xl font-bold mb-6">Step 2: Select a Programme</h1><div className="space-y-4">{filteredProgrammes.length > 0 ? filteredProgrammes.map(prog => (<div key={prog._id} onClick={() => setSelectedProgramme(prog)} className="p-4 bg-white rounded-lg shadow cursor-pointer"><h2 className="text-xl font-semibold">{prog.name}</h2></div>)) : <p>No programmes found for this category.</p>}</div></div>);
+    }
+    
+    // VIEW 3: Select Team
     if (!selectedTeam) {
-        return (
-            <div className="p-8">
-                <button onClick={handleBackToProgrammes} className="text-sm text-blue-600 hover:underline mb-4">&larr; Back to Programmes</button>
-                <h1 className="text-3xl font-bold text-gray-800 mb-6">Step 2: Select a Team</h1>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {teams.map(team => (
-                        <div key={team._id} onClick={() => setSelectedTeam(team)} className="p-6 bg-white rounded-lg shadow-md hover:shadow-lg hover:bg-blue-50 cursor-pointer">
-                            <h2 className="text-xl font-semibold text-gray-700">{team.name}</h2>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        );
+        return (<div className="p-8"><button onClick={handleBackToCategories} className="text-sm text-blue-600 mb-4">&larr; Back to Programmes</button><h1 className="text-3xl font-bold mb-6">Step 3: Select a Team</h1><div className="grid grid-cols-1 md:grid-cols-3 gap-6">{teams.map(team => (<div key={team._id} onClick={() => setSelectedTeam(team)} className="p-6 bg-white rounded-lg shadow cursor-pointer"><h2 className="text-xl font-semibold">{team.name}</h2></div>))}</div></div>);
     }
 
-    // VIEW 3: Select a Category
-    if (!selectedCategory) {
-        return (
-            <div className="p-8">
-                <button onClick={handleBackToTeams} className="text-sm text-blue-600 hover:underline mb-4">&larr; Back to Teams</button>
-                <h1 className="text-3xl font-bold text-gray-800 mb-6">Step 3: Select a Category</h1>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {categories.map(cat => (
-                        <div key={cat} onClick={() => setSelectedCategory(cat)} className="p-6 bg-white rounded-lg shadow-md hover:shadow-lg hover:bg-blue-50 cursor-pointer">
-                            <h2 className="text-xl font-semibold text-gray-700">{cat}</h2>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        );
-    }
-    
-    // VIEW 4: Enter Results for the filtered candidates
+    // VIEW 4: Enter Results
     return (
         <div className="p-8">
-            <div>
-                <button onClick={() => setSelectedCategory(null)} className="text-sm text-blue-600 hover:underline mb-2">&larr; Back to Categories</button>
-                <h1 className="text-3xl font-bold text-gray-800">Enter Results for {selectedProgramme.name}</h1>
-                <p className="text-gray-600">Team: {selectedTeam.name} | Category: {selectedCategory}</p>
+            <button onClick={() => setSelectedTeam(null)} className="text-sm text-blue-600 mb-2">&larr; Back to Teams</button>
+            <h1 className="text-3xl font-bold">Enter Results for {selectedProgramme.name}</h1>
+            <p className="text-gray-600">Team: {selectedTeam.name} | Category: {selectedCategory}</p>
+            <div className="mt-6 bg-white rounded-lg shadow">
+                <table className="min-w-full">
+                    <thead><tr><th className="px-6 py-3 text-left text-xs font-medium uppercase">Candidate</th><th className="px-6 py-3 text-left text-xs font-medium uppercase">Rank</th><th className="px-6 py-3 text-left text-xs font-medium uppercase">Grade</th></tr></thead>
+                    <tbody>
+                        {filteredCandidates.map(c => (
+                            <tr key={c._id}>
+                                <td className="px-6 py-4">{c.name}</td>
+                                <td className="px-6 py-4">
+                                    <select className="w-full p-2 border rounded" value={resultsData[c._id]?.rank || ''} onChange={e => handleResultChange(c._id, 'rank', e.target.value)}>
+                                        <option value="">N/A</option><option value="1">1st</option><option value="2">2nd</option><option value="3">3rd</option>
+                                    </select>
+                                </td>
+                                <td className="px-6 py-4">
+                                    <select className="w-full p-2 border rounded" value={resultsData[c._id]?.grade || ''} onChange={e => handleResultChange(c._id, 'grade', e.target.value)}>
+                                        <option value="">N/A</option><option value="A">A</option><option value="B">B</option><option value="C">C</option>
+                                    </select>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
             </div>
-
-            {loading && <p className="p-8 text-center">Loading...</p>}
-            {!loading && (
-                <>
-                    <div className="mt-6 bg-white rounded-lg shadow overflow-x-auto">
-                        <table className="min-w-full">
-                           <thead className="bg-gray-50">
-                                <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Candidate Name</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rank</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Grade</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-200">
-                                {filteredCandidates.length > 0 ? filteredCandidates.map(candidate => (
-                                    <tr key={candidate._id}>
-                                        <td className="px-6 py-4 font-medium text-gray-900">{candidate.name}</td>
-                                        <td className="px-6 py-4">
-                                            <select className="w-full p-2 border rounded-md" value={resultsData[candidate._id]?.rank || ''} onChange={(e) => handleResultChange(candidate._id, 'rank', e.target.value)}>
-                                                <option value="">N/A</option><option value="1">1st</option><option value="2">2nd</option><option value="3">3rd</option>
-                                            </select>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <select className="w-full p-2 border rounded-md" value={resultsData[candidate._id]?.grade || ''} onChange={(e) => handleResultChange(candidate._id, 'grade', e.target.value)}>
-                                                <option value="">N/A</option><option value="A">A</option><option value="B">B</option><option value="C">C</option>
-                                            </select>
-                                        </td>
-                                    </tr>
-                                )) : <tr><td colSpan="3" className="text-center p-4 text-gray-500">No candidates found for this team and category.</td></tr>}
-                            </tbody>
-                        </table>
-                    </div>
-                    <div className="mt-6 flex justify-end">
-                        <button onClick={handleSubmitResults} className="px-6 py-3 font-semibold text-white bg-green-600 rounded-md hover:bg-green-700 shadow-sm" disabled={loading}>
-                            {loading ? 'Saving...' : 'Save & Publish Results'}
-                        </button>
-                    </div>
-                </>
-            )}
+            <div className="mt-6 flex justify-end">
+                <button onClick={handleSavePending} className="px-6 py-3 font-semibold text-white bg-blue-600 rounded-md hover:bg-blue-700">
+                    Save and Add to Pending
+                </button>
+            </div>
         </div>
     );
 };

@@ -7,6 +7,7 @@ import CandidatePage from './pages/CandidatesPage';
 import AddProgrammeForm from './components/AddProgrammeForm';
 import ProgrammesPage from './pages/ProgrammesPage';
 import ResultsPage from './pages/ResultsPage';
+import PendingResultsPage from './pages/PendingResultPage';
 function App() {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     // This state manages which page is active
@@ -38,6 +39,8 @@ function App() {
                 return <ProgrammesPage />;
             case 'results':
                 return <ResultsPage />;
+            case 'pending results':
+                return <PendingResultsPage />
             case 'dashboard':
             default:
                 return <DashboardPage />;
@@ -60,6 +63,7 @@ function App() {
                     <button onClick={() => setActivePage('candidates')} className={`w-full px-4 py-2 mb-2 text-left rounded-md hover:bg-gray-200 ${activePage === 'candidates' ? 'bg-gray-200' : ''}`}>Candidates</button>
                     <button onClick={() => setActivePage('programmes')} className={`w-full px-4 py-2 mb-2 text-left rounded-md hover:bg-gray-200 ${activePage === 'programmes' ? 'bg-gray-200' : ''}`}>Programmes</button>
                     <button onClick={() => setActivePage('results')} className={`w-full px-4 py-2 mb-2 text-left rounded-md hover:bg-gray-200 ${activePage === 'results' ? 'bg-gray-200' : ''}`}>Results</button>
+                    <button onClick={() => setActivePage('pending results')} className={`w-full px-4 py-2 mb-2 text-left rounded-md hover:bg-gray-200 ${activePage === 'pending results' ? 'bg-gray-200' : ''}`}>Pending Results</button>
                 </nav>
                 <div className="mt-auto">
                     <button onClick={handleLogout} className="w-full px-4 py-2 text-left text-red-600 rounded-md hover:bg-red-100">Logout</button>

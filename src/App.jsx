@@ -35,12 +35,12 @@ function App() {
         switch (activePage) {
             case 'candidates':
                 return <CandidatePage />;
-            case 'programmes':
-                return <ProgrammesPage />;
-            case 'results':
-                return <ResultsPage />;
-            case 'pending results':
-                return <PendingResultsPage />
+            // case 'programmes':
+            //     return <ProgrammesPage />;
+            // case 'results':
+            //     return <ResultsPage />;
+            // case 'pending results':
+            //     return <PendingResultsPage />
             case 'dashboard':
             default:
                 return <DashboardPage />;
@@ -61,9 +61,9 @@ function App() {
                 <nav className="mt-8">
                     <button onClick={() => setActivePage('dashboard')} className={`w-full px-4 py-2 mb-2 text-left rounded-md hover:bg-gray-200 ${activePage === 'dashboard' ? 'bg-gray-200' : ''}`}>Dashboard</button>
                     <button onClick={() => setActivePage('candidates')} className={`w-full px-4 py-2 mb-2 text-left rounded-md hover:bg-gray-200 ${activePage === 'candidates' ? 'bg-gray-200' : ''}`}>Candidates</button>
-                    <button onClick={() => setActivePage('programmes')} className={`w-full px-4 py-2 mb-2 text-left rounded-md hover:bg-gray-200 ${activePage === 'programmes' ? 'bg-gray-200' : ''}`}>Programmes</button>
+                    {/* <button onClick={() => setActivePage('programmes')} className={`w-full px-4 py-2 mb-2 text-left rounded-md hover:bg-gray-200 ${activePage === 'programmes' ? 'bg-gray-200' : ''}`}>Programmes</button>
                     <button onClick={() => setActivePage('results')} className={`w-full px-4 py-2 mb-2 text-left rounded-md hover:bg-gray-200 ${activePage === 'results' ? 'bg-gray-200' : ''}`}>Results</button>
-                    <button onClick={() => setActivePage('pending results')} className={`w-full px-4 py-2 mb-2 text-left rounded-md hover:bg-gray-200 ${activePage === 'pending results' ? 'bg-gray-200' : ''}`}>Pending Results</button>
+                    <button onClick={() => setActivePage('pending results')} className={`w-full px-4 py-2 mb-2 text-left rounded-md hover:bg-gray-200 ${activePage === 'pending results' ? 'bg-gray-200' : ''}`}>Pending Results</button> */}
                 </nav>
                 <div className="mt-auto">
                     <button onClick={handleLogout} className="w-full px-4 py-2 text-left text-red-600 rounded-md hover:bg-red-100">Logout</button>
